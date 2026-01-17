@@ -1,0 +1,28 @@
+# Dockerfile for KLEE-based verification
+#
+# Usage:
+#   docker build -f Dockerfile.klee -t bpf-verify-klee .
+#   docker run --rm -v $(pwd):/work bpf-verify-klee verify-alu64-add
+#
+# Or use the Makefile:
+#   make docker-build-klee
+#   make verify-alu64-add TOOL=klee
+
+FROM klee/klee:latest
+
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    make \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /work
+
+COPY verifier_spec.c /work/
+COPY output/range_analysis.c /work/output/
+
+USER klee
+
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["echo 'Usage: docker run --rm -v $(pwd):/work bpf-verify-klee \"make verify-alu64-add TOOL=klee\"'"]
