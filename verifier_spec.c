@@ -163,6 +163,28 @@ static u64 concrete_mul64(u64 a, u64 b)
 {
 	return a * b;
 }
+static u64 concrete_udiv64(u64 a, u64 b)
+{
+	return (b == 0) ? 0 : (a / b);
+}
+static u64 concrete_sdiv64(u64 a, u64 b)
+{
+	s64 sa = a;
+	s64 sb = b;
+
+	if (sa == S64_MIN && sb == -1)
+		return (u64)sa;
+
+	return (sb == 0) ? 0 : (sa / sb);
+}
+static u64 concrete_umod64(u64 a, u64 b)
+{
+	return (b == 0) ? a : (a % b);
+}
+static u64 concrete_smod64(u64 a, u64 b)
+{
+	return ((s64)b == 0) ? a : ((s64)a % (s64)b);
+}
 static u64 concrete_and64(u64 a, u64 b)
 {
 	return a & b;
@@ -201,6 +223,28 @@ static u32 concrete_mul32(u32 a, u32 b)
 {
 	return a * b;
 }
+static u32 concrete_udiv32(u32 a, u32 b)
+{
+	return (b == 0) ? 0 : (a / b);
+}
+static u32 concrete_sdiv32(u32 a, u32 b)
+{
+	s32 sa = a;
+	s32 sb = b;
+
+	if (sa == S32_MIN && sb == -1)
+		return (u32)sa;
+
+	return (sb == 0) ? 0 : (sa / sb);
+}
+static u32 concrete_umod32(u32 a, u32 b)
+{
+	return (b == 0) ? a : (a % b);
+}
+static u32 concrete_smod32(u32 a, u32 b)
+{
+	return ((s32)b == 0) ? a : ((s32)a % (s32)b);
+}
 static u32 concrete_and32(u32 a, u32 b)
 {
 	return a & b;
@@ -226,6 +270,10 @@ static u32 concrete_arsh32(u32 a, u32 b)
 	return (u32)((s32)a >> b);
 }
 
+/* Extend bpf op */
+#define BPF_SDIV_ 0x08
+#define BPF_SMOD_ 0x18
+
 static u64 (*get_op64(u8 op))(u64, u64)
 {
 	switch (op) {
@@ -235,6 +283,14 @@ static u64 (*get_op64(u8 op))(u64, u64)
 		return concrete_sub64;
 	case BPF_MUL:
 		return concrete_mul64;
+	case BPF_DIV:
+		return concrete_udiv64;
+	case BPF_SDIV_:
+		return concrete_sdiv64;
+	case BPF_MOD:
+		return concrete_umod64;
+	case BPF_SMOD_:
+		return concrete_smod64;
 	case BPF_AND:
 		return concrete_and64;
 	case BPF_OR:
@@ -261,6 +317,14 @@ static u32 (*get_op32(u8 op))(u32, u32)
 		return concrete_sub32;
 	case BPF_MUL:
 		return concrete_mul32;
+	case BPF_DIV:
+		return concrete_udiv32;
+	case BPF_SDIV_:
+		return concrete_sdiv32;
+	case BPF_MOD:
+		return concrete_umod32;
+	case BPF_SMOD_:
+		return concrete_smod32;
 	case BPF_AND:
 		return concrete_and32;
 	case BPF_OR:
@@ -346,14 +410,22 @@ static void verify_alu64(u8 opcode)
 	struct bpf_reg_state dst, src;
 	u64 dv, sv, rv;
 	u64 (*op)(u64, u64) = get_op64(opcode);
+	u16 off = 0;
 	int err;
 
 	SYMBOLIC(&dv, sizeof(dv), "dst_val");
 	SYMBOLIC(&sv, sizeof(sv), "src_val");
 
 	/* Bound the shift amount */
-	if (opcode == BPF_LSH || opcode == BPF_RSH || opcode == BPF_ARSH)
+	if (opcode == BPF_LSH || opcode == BPF_RSH || opcode == BPF_ARSH) {
 		ASSUME(sv < 64);
+	} else if (opcode == BPF_SDIV_) {
+		off = 1;
+		opcode = BPF_DIV;
+	} else if (opcode == BPF_SMOD_) {
+		off = 1;
+		opcode = BPF_MOD;
+	}
 
 	symbolic_reg_containing(&dst, dv);
 	symbolic_reg_containing(&src, sv);
@@ -362,6 +434,7 @@ static void verify_alu64(u8 opcode)
 
 	struct bpf_insn insn = {
 		.code = BPF_ALU64 | opcode | BPF_X,
+		.off = off,
 	};
 	err = adjust_scalar_min_max_vals(&env, &insn, &dst, src);
 
@@ -375,13 +448,21 @@ static void verify_alu32(u8 opcode)
 	struct bpf_reg_state dst, src;
 	u64 dv, sv;
 	u32 (*op)(u32, u32) = get_op32(opcode);
+	u16 off = 0;
 	int err;
 
 	SYMBOLIC(&dv, sizeof(dv), "dst_val");
 	SYMBOLIC(&sv, sizeof(sv), "src_val");
 
-	if (opcode == BPF_LSH || opcode == BPF_RSH || opcode == BPF_ARSH)
+	if (opcode == BPF_LSH || opcode == BPF_RSH || opcode == BPF_ARSH) {
 		ASSUME((u32)sv < 32);
+	} else if (opcode == BPF_SDIV_) {
+		off = 1;
+		opcode = BPF_DIV;
+	} else if (opcode == BPF_SMOD_) {
+		off = 1;
+		opcode = BPF_MOD;
+	}
 
 	symbolic_reg_containing(&dst, dv);
 	symbolic_reg_containing(&src, sv);
@@ -390,6 +471,7 @@ static void verify_alu32(u8 opcode)
 
 	struct bpf_insn insn = {
 		.code = BPF_ALU | opcode | BPF_X,
+		.off = off,
 	};
 	err = adjust_scalar_min_max_vals(&env, &insn, &dst, src);
 

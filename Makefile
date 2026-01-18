@@ -19,12 +19,12 @@ SPEC          := verifier_spec.c
 RESULTS_DIR   := $(OUTPUT_DIR)/$(TOOL)_results
 
 # mul is skipped due to semantic mismatch
-ALU_OPS       := add sub and or xor neg lsh rsh arsh
+ALU_OPS       := add sub and or xor neg lsh rsh arsh div sdiv mod smod
 JMP_OPS       := eq ne gt ge lt le sgt sge slt sle set
 CATEGORIES    := alu64 alu32 branch64 branch32
 
 # Map lowercase op names to BPF opcodes
-op_to_bpf = $(strip $(if $(filter add,$1),BPF_ADD,$(if $(filter sub,$1),BPF_SUB,$(if $(filter mul,$1),BPF_MUL,$(if $(filter and,$1),BPF_AND,$(if $(filter or,$1),BPF_OR,$(if $(filter xor,$1),BPF_XOR,$(if $(filter neg,$1),BPF_NEG,$(if $(filter lsh,$1),BPF_LSH,$(if $(filter rsh,$1),BPF_RSH,$(if $(filter arsh,$1),BPF_ARSH,$(if $(filter eq,$1),BPF_JEQ,$(if $(filter ne,$1),BPF_JNE,$(if $(filter gt,$1),BPF_JGT,$(if $(filter ge,$1),BPF_JGE,$(if $(filter lt,$1),BPF_JLT,$(if $(filter le,$1),BPF_JLE,$(if $(filter sgt,$1),BPF_JSGT,$(if $(filter sge,$1),BPF_JSGE,$(if $(filter slt,$1),BPF_JSLT,$(if $(filter sle,$1),BPF_JSLE,$(if $(filter set,$1),BPF_JSET,UNKNOWN))))))))))))))))))))))
+op_to_bpf = $(strip $(if $(filter add,$1),BPF_ADD,$(if $(filter sub,$1),BPF_SUB,$(if $(filter mul,$1),BPF_MUL,$(if $(filter div,$1),BPF_DIV,$(if $(filter sdiv,$1),BPF_SDIV_,$(if $(filter mod,$1),BPF_MOD,$(if $(filter smod,$1),BPF_SMOD_,$(if $(filter and,$1),BPF_AND,$(if $(filter or,$1),BPF_OR,$(if $(filter xor,$1),BPF_XOR,$(if $(filter neg,$1),BPF_NEG,$(if $(filter lsh,$1),BPF_LSH,$(if $(filter rsh,$1),BPF_RSH,$(if $(filter arsh,$1),BPF_ARSH,$(if $(filter eq,$1),BPF_JEQ,$(if $(filter ne,$1),BPF_JNE,$(if $(filter gt,$1),BPF_JGT,$(if $(filter ge,$1),BPF_JGE,$(if $(filter lt,$1),BPF_JLT,$(if $(filter le,$1),BPF_JLE,$(if $(filter sgt,$1),BPF_JSGT,$(if $(filter sge,$1),BPF_JSGE,$(if $(filter slt,$1),BPF_JSLT,$(if $(filter sle,$1),BPF_JSLE,$(if $(filter set,$1),BPF_JSET,UNKNOWN))))))))))))))))))))))))))
 
 # Map category to VERIFY_* define
 cat_to_def = $(strip $(if $(filter alu64,$1),VERIFY_ALU64,$(if $(filter alu32,$1),VERIFY_ALU32,$(if $(filter branch64,$1),VERIFY_BRANCH64,$(if $(filter branch32,$1),VERIFY_BRANCH32,$(if $(filter minmax64,$1),VERIFY_MINMAX64,$(if $(filter minmax32,$1),VERIFY_MINMAX32,UNKNOWN)))))))

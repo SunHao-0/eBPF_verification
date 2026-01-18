@@ -282,6 +282,10 @@ static inline int ___builtin_clzll(unsigned long long x)
 #define check_sub_overflow(a, b, res) ___builtin_sub_overflow(a, b, res)
 // Semantic mismatch, skipping mul verification
 #define check_mul_overflow(a, b, res) __builtin_mul_overflow(a, b, res)
+
+#define div64_s64(a, b) ((s64)(a) / (s64)(b))
+#define div64_u64(a, b) ((u64)(a) / (u64)(b))
+
 #define fls64(x) ((x) ? (64 - ___builtin_clzll(x)) : 0)
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
@@ -403,6 +407,7 @@ def generate_output(verifier_funcs: Dict[str, ExtractedFunction],
         '__reg_deduce_bounds', '__reg_bound_offset', 'reg_bounds_sync',
         '__reg32_bound_s64', '__reg_assign_32_into_64', 'zext_32_to_64',
         'is_reg_const', 'reg_const_value',
+        'reset_reg64_and_tnum', 'reset_reg32_and_tnum',
     ]
     for name in helper_order:
         if name in verifier_funcs:
@@ -423,6 +428,10 @@ def generate_output(verifier_funcs: Dict[str, ExtractedFunction],
         'scalar32_min_max_lsh', 'scalar_min_max_lsh',
         'scalar32_min_max_rsh', 'scalar_min_max_rsh',
         'scalar32_min_max_arsh', 'scalar_min_max_arsh',
+        'scalar32_min_max_udiv', 'scalar_min_max_udiv',
+        'scalar32_min_max_sdiv', 'scalar_min_max_sdiv',
+        'scalar32_min_max_umod', 'scalar_min_max_umod',
+        'scalar32_min_max_smod', 'scalar_min_max_smod',
         'is_safe_to_compute_dst_reg_range',
     ]
     for name in scalar_order:
@@ -512,12 +521,17 @@ Examples:
         'scalar32_min_max_rsh', 'scalar_min_max_rsh',
         'scalar32_min_max_arsh', 'scalar_min_max_arsh',
         'is_safe_to_compute_dst_reg_range',
+        'scalar32_min_max_udiv', 'scalar_min_max_udiv',
+        'scalar32_min_max_sdiv', 'scalar_min_max_sdiv',
+        'scalar32_min_max_umod', 'scalar_min_max_umod',
+        'scalar32_min_max_smod', 'scalar_min_max_smod',
         # Bounds sync helpers
         'reg_bounds_sync',
         '__update_reg_bounds', '__update_reg32_bounds', '__update_reg64_bounds',
         '__reg32_deduce_bounds', '__reg64_deduce_bounds', '__reg_deduce_mixed_bounds',
         '__reg_deduce_bounds', '__reg_bound_offset',
         '__reg32_bound_s64', '__reg_assign_32_into_64', 'zext_32_to_64',
+        'reset_reg64_and_tnum', 'reset_reg32_and_tnum',
         # reg helpers
         '___mark_reg_known', '__mark_reg_known', '__mark_reg32_known',
         '__mark_reg_known_zero', '__mark_reg_unknown', '__mark_reg_unknown_imprecise',
